@@ -21,7 +21,7 @@ final class ExpensePresenter
             'method' => $expense->paymentMethod?->name,
             'notes' => Text::plain($expense->notes),
             'has_receipt' => $expense->getMedia('receipts')->isNotEmpty(),
-            'app_url' => Link::to("expenses/{$expense->id}/edit"),
+            'app_url' => Link::to("expenses/{$expense->id}/view"),
         ];
     }
 }

@@ -114,6 +114,31 @@ test('a recurring expense is recorded as paid on its day', function () {
         ->and(Bill::query()->count())->toBe(0);
 });
 
+test('a recurring expense carries how its tax was entered and what share is business', function () {
+    overdueSchedule($this, [
+        'mode' => 'EXPENSE',
+        'template' => [
+            'amount' => 5500,
+            'currency_id' => $this->currencyId,
+            'exchange_rate' => 1,
+            'expense_category_id' => $this->category->id,
+            'tax_included' => false,
+            'business_use_percent' => 80,
+            'tax_deductible' => false,
+            'deduction_note' => 'Mobile plan, 80% work',
+        ],
+    ], '2026-06-01 00:00:00');
+
+    artisan('recurring-costs:generate')->assertSuccessful();
+
+    $expense = Expense::query()->sole();
+
+    expect($expense->tax_included)->toBeFalse()
+        ->and($expense->business_use_percent)->toBe(80.0)
+        ->and($expense->tax_deductible)->toBeFalse()
+        ->and($expense->deduction_note)->toBe('Mobile plan, 80% work');
+});
+
 test('a count limit completes the schedule, and raising it reactivates it', function () {
     $schedule = overdueSchedule($this, ['limit_by' => 'COUNT', 'limit_count' => 2]);
 

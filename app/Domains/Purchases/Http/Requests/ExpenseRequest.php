@@ -38,6 +38,16 @@ class ExpenseRequest extends FormRequest
                 $key => json_last_error() === JSON_ERROR_NONE ? $decoded : null,
             ]);
         }
+
+        // Multipart turns booleans into the words "true" and "false", which
+        // the boolean rule would refuse.
+        foreach (['tax_included', 'tax_deductible'] as $key) {
+            $submitted = $this->input($key);
+
+            if (is_string($submitted) && in_array(strtolower($submitted), ['true', 'false'], true)) {
+                $this->merge([$key => strtolower($submitted) === 'true']);
+            }
+        }
     }
 
     /**
@@ -86,6 +96,11 @@ class ExpenseRequest extends FormRequest
                     ->where('transaction_type', TaxType::TRANSACTION_TYPE_PURCHASES),
             ],
             'taxes.*.amount' => ['required', 'integer', 'min:0'],
+            // Left out of a request, these keep what the expense already says
+            'tax_included' => ['sometimes', 'boolean'],
+            'business_use_percent' => ['sometimes', 'numeric', 'min:0', 'max:100'],
+            'tax_deductible' => ['sometimes', 'boolean'],
+            'deduction_note' => ['sometimes', 'nullable', 'string', 'max:10000'],
         ];
 
         $homeCurrency = CompanySetting::getSetting('currency', $this->header('company'));

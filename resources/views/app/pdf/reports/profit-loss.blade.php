@@ -9,6 +9,9 @@
 
 @section('report-body')
     <p class="report-muted">@lang('pdf_cash_basis_note')</p>
+    @if (! empty($excludeTax))
+        <p class="report-muted">@lang('pdf_profit_loss_excludes_tax_note')</p>
+    @endif
     <div class="report-section">
         <table class="report-table">
             <tr>

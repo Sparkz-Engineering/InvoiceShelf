@@ -20,6 +20,7 @@ import { recurringInvoiceRoutes } from '../features/company/recurring-invoices/r
 import { paymentRoutes } from '../features/company/payments/routes'
 import { purchaseRoutes } from '../features/company/purchases/routes'
 import { expenseRoutes } from '../features/company/expenses/routes'
+import { taxDeductionRoutes } from '../features/company/tax-deductions/routes'
 import itemRoutes from '../features/company/items/routes'
 import memberRoutes from '../features/company/members/routes'
 import reportRoutes from '../features/company/reports/routes'
@@ -55,6 +56,7 @@ const companyChildren: RouteRecordRaw[] = [
   ...recurringInvoiceRoutes,
   ...paymentRoutes,
   ...expenseRoutes,
+  ...taxDeductionRoutes,
   ...purchaseRoutes,
   ...itemRoutes,
   ...memberRoutes,

@@ -36,6 +36,8 @@ class ExpenseCategoryResource extends JsonResource
             'id' => $category->id,
             'name' => $category->name,
             'description' => $category->description,
+            'tax_deductible' => (bool) $category->tax_deductible,
+            'default_tax_treatment' => $category->default_tax_treatment,
             'company_id' => $category->company_id,
             'amount' => $category->amount,
             'formatted_created_at' => $category->formattedCreatedAt,

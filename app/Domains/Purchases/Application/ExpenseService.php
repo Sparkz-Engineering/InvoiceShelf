@@ -9,6 +9,7 @@ use App\Domains\Purchases\Contracts\ExpenseReceiptManager;
 use App\Domains\Purchases\Contracts\ExpenseTaxManager;
 use App\Domains\Purchases\Data\PendingExpenseReceipt;
 use App\Domains\Purchases\Models\Expense;
+use App\Domains\Purchases\Models\ExpenseCategory;
 use App\Domains\Purchases\Models\Supplier;
 use App\Domains\Purchases\Models\SupplierCredit;
 use Illuminate\Support\Facades\DB;
@@ -32,6 +33,8 @@ class ExpenseService
         ?PendingExpenseReceipt $receipt = null,
         ?iterable $customFields = null,
     ): Expense {
+        $attributes = $this->withCategoryDefaults($attributes);
+
         $expense = DB::transaction(function () use ($attributes, $taxes): Expense {
             $expense = Expense::create($attributes);
 
@@ -133,6 +136,30 @@ class ExpenseService
         }
 
         return $expense->fresh('taxes.taxType');
+    }
+
+    /**
+     * A new expense that does not say whether it is deductible takes its
+     * category's answer, so a heading such as "Fines" can default to no.
+     *
+     * @param  array<string, mixed>  $attributes
+     * @return array<string, mixed>
+     */
+    private function withCategoryDefaults(array $attributes): array
+    {
+        if (array_key_exists('tax_deductible', $attributes) || empty($attributes['expense_category_id'])) {
+            return $attributes;
+        }
+
+        $category = ExpenseCategory::query()
+            ->where('company_id', $attributes['company_id'] ?? null)
+            ->find($attributes['expense_category_id']);
+
+        if ($category) {
+            $attributes['tax_deductible'] = (bool) $category->tax_deductible;
+        }
+
+        return $attributes;
     }
 
     /**

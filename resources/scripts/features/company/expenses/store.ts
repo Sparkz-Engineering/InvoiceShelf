@@ -43,6 +43,11 @@ export interface ExpenseFormData {
   customFields: CustomFieldValue[]
   fields: CustomFieldValue[]
   taxes: ExpenseTax[]
+  /** How the amount was typed; `amount` itself is always the gross */
+  tax_included: boolean
+  business_use_percent: number
+  tax_deductible: boolean
+  deduction_note: string | null
 }
 
 function createExpenseStub(): ExpenseFormData {
@@ -65,6 +70,10 @@ function createExpenseStub(): ExpenseFormData {
     customFields: [],
     fields: [],
     taxes: [],
+    tax_included: true,
+    business_use_percent: 100,
+    tax_deductible: true,
+    deduction_note: null,
   }
 }
 

@@ -13,8 +13,9 @@ use Illuminate\Support\Collection;
  * Tax on sales and on purchases over a period, by document date and whatever
  * has been paid: what the documents say, from their stored tax snapshots.
  *
- * Sales are every issued invoice and credit note (a credit note's tax is
- * negative), whether paid or not. Purchases are expenses and recorded bills
+ * Sales are every issued invoice and every credit note (a credit note's tax
+ * is negative, and it is stored as a draft however final it is), whether
+ * paid or not. Purchases are expenses and recorded bills
  * less supplier credits, as the purchases report counts them. Payments,
  * refunds and allocations never add tax of their own.
  */
@@ -41,10 +42,15 @@ class TaxSummaryQuery
      */
     private function salesRows(int $companyId, string $from, string $to): array
     {
+        // A credit note is kept as a draft from the moment it is raised, and
+        // it counts from that moment, so the draft rule is for invoices only
         $issued = fn (Builder $query) => $query
             ->where('company_id', $companyId)
-            ->where('status', '!=', Invoice::STATUS_DRAFT)
-            ->whereIn('type', [Invoice::TYPE_INVOICE, Invoice::TYPE_CREDIT_NOTE])
+            ->where(fn (Builder $documents) => $documents
+                ->where(fn (Builder $invoices) => $invoices
+                    ->where('type', Invoice::TYPE_INVOICE)
+                    ->where('status', '!=', Invoice::STATUS_DRAFT))
+                ->orWhere('type', Invoice::TYPE_CREDIT_NOTE))
             ->where('invoice_date', '>=', $from)
             ->where('invoice_date', '<', CarbonImmutable::parse($to)->addDay()->toDateString());
 

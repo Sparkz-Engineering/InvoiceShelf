@@ -236,6 +236,31 @@
               kind="method"
               :options="options.payment_methods"
           /></PurchaseField>
+          <PurchaseField
+            :label="$t('expenses.business_use_percent')"
+            name="template.business_use_percent"
+            ><BaseInput
+              v-model="expense.business_use_percent"
+              type="number"
+              min="0"
+              max="100"
+              step="0.01"
+          /></PurchaseField>
+          <PurchaseField
+            :label="$t('expenses.tax_deductible')"
+            name="template.tax_deductible"
+            ><BaseSwitch v-model="expense.tax_deductible" class="mt-2"
+          /></PurchaseField>
+          <PurchaseField
+            class="md:col-span-2"
+            :label="$t('expenses.deduction_note')"
+            name="template.deduction_note"
+            ><BaseTextarea
+              v-model="expense.deduction_note"
+              rows="2"
+              maxlength="10000"
+              :placeholder="$t('expenses.deduction_note_placeholder')"
+          /></PurchaseField>
           <div class="space-y-3 md:col-span-2">
             <div class="grid gap-5 md:grid-cols-2">
               <PurchaseField
@@ -356,6 +381,10 @@ const bill = reactive({
     amount: 0,
     expense_category_id: null as number | null,
     payment_method_id: null as number | null,
+    // How a run's expense counts at tax time
+    business_use_percent: 100 as number | string,
+    tax_deductible: true,
+    deduction_note: '',
   }),
   expenseTaxes = ref<Record<number, number>>({})
 const options = ref<PurchaseOptions>({
@@ -466,6 +495,9 @@ onMounted(async () => {
         expense.amount = Number(template.amount ?? 0)
         expense.expense_category_id = template.expense_category_id ?? null
         expense.payment_method_id = template.payment_method_id ?? null
+        expense.business_use_percent = template.business_use_percent ?? 100
+        expense.tax_deductible = template.tax_deductible ?? true
+        expense.deduction_note = template.deduction_note ?? ''
         for (const tax of template.taxes ?? [])
           expenseTaxes.value[tax.tax_type_id] = tax.amount
         expenseCustomFields.value = purchaseCustomFields(
@@ -526,6 +558,11 @@ function template() {
       amount: expense.amount,
       expense_category_id: expense.expense_category_id,
       payment_method_id: expense.payment_method_id,
+      // The tax amounts below are the ones inside the amount
+      tax_included: true,
+      business_use_percent: Number(expense.business_use_percent),
+      tax_deductible: expense.tax_deductible,
+      deduction_note: expense.deduction_note || null,
       taxes: Object.entries(expenseTaxes.value)
         .filter(
           ([taxId, amount]) =>

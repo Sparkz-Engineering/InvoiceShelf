@@ -263,7 +263,7 @@
                       :to="
                         record.source_bill_id
                           ? `/admin/bills/${record.source_bill_id}/view`
-                          : `/admin/expenses/${record.source_expense_id}/edit`
+                          : `/admin/expenses/${record.source_expense_id}/view`
                       "
                       class="text-primary-600"
                       >{{ $t('purchases.view_source') }}</router-link

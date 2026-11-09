@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useCompanyStore } from '../../../../stores/company.store'
 import { useUserStore } from '../../../../stores/user.store'
@@ -7,6 +7,8 @@ import { useModalStore } from '../../../../stores/modal.store'
 import { taxTypeService } from '../../../../api/services/tax-type.service'
 import TaxTypeDropdown from '@/scripts/features/company/settings/components/TaxTypeDropdown.vue'
 import TaxTypeModal from '@/scripts/features/company/settings/components/TaxTypeModal.vue'
+import BasSettings from '@/scripts/features/company/settings/components/BasSettings.vue'
+import type { TaxType } from '@/scripts/types/domain/tax'
 
 interface TableColumn {
   key: string
@@ -132,6 +134,39 @@ const taxIncludedByDefaultField = computed<boolean>({
   },
 })
 
+// The tax a new expense starts with, such as GST on a purchase
+const purchaseTaxTypes = ref<TaxType[]>([])
+const defaultPurchaseTaxTypeId = ref<number | null>(
+  Number(companyStore.selectedCompanySettings.default_purchase_tax_type_id) || null,
+)
+
+async function fetchPurchaseTaxTypes(): Promise<void> {
+  try {
+    const response = await taxTypeService.list({
+      limit: 'all',
+      transaction_type: 'purchases',
+    })
+    purchaseTaxTypes.value = response.data
+  } catch {
+    purchaseTaxTypes.value = []
+  }
+}
+
+async function saveDefaultPurchaseTax(id: number | null): Promise<void> {
+  defaultPurchaseTaxTypeId.value = id
+
+  await companyStore.updateCompanySettings({
+    data: { settings: { default_purchase_tax_type_id: id ? String(id) : '' } },
+    message: 'general.setting_updated',
+  })
+}
+
+onMounted(() => {
+  if (userStore.currentUser?.is_owner) {
+    void fetchPurchaseTaxTypes()
+  }
+})
+
 function hasAtleastOneAbility(): boolean {
   return userStore.hasAbilities([ABILITIES.DELETE_TAX_TYPE, ABILITIES.EDIT_TAX_TYPE])
 }
@@ -158,6 +193,7 @@ async function fetchData({ page, sort }: FetchParams): Promise<FetchResult> {
 
 function refreshTable(): void {
   table.value?.refresh()
+  void fetchPurchaseTaxTypes()
 }
 
 function openTaxModal(): void {
@@ -166,7 +202,7 @@ function openTaxModal(): void {
     componentName: 'TaxTypeModal',
     size: 'sm',
     data: { transaction_type: 'sales' },
-    refreshData: table.value?.refresh,
+    refreshData: refreshTable,
   })
 }
 </script>
@@ -268,6 +304,34 @@ function openTaxModal(): void {
         :title="$t('settings.tax_types.tax_included_by_default')"
         :description="$t('settings.tax_types.tax_included_by_default_description')"
       />
+
+      <BaseDivider class="mt-8 mb-6" />
+
+      <div class="grid gap-4 md:grid-cols-2 md:items-start">
+        <div>
+          <p id="default-purchase-tax-label" class="text-base font-medium text-heading">
+            {{ $t('settings.tax_types.default_purchase_tax') }}
+          </p>
+          <p class="mt-1 text-sm text-muted">
+            {{ $t('settings.tax_types.default_purchase_tax_description') }}
+          </p>
+        </div>
+        <BaseMultiselect
+          :model-value="defaultPurchaseTaxTypeId"
+          :options="purchaseTaxTypes"
+          value-prop="id"
+          label="name"
+          track-by="name"
+          :placeholder="$t('settings.tax_types.no_default_purchase_tax')"
+          aria-labelledby="default-purchase-tax-label"
+          can-deselect
+          @update:model-value="saveDefaultPurchaseTax"
+        />
+      </div>
+
+      <BaseDivider class="mt-8 mb-2" />
+
+      <BasSettings />
     </div>
   </BaseSettingCard>
 </template>

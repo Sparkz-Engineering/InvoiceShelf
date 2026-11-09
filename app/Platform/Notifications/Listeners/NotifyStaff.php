@@ -201,7 +201,7 @@ class NotifyStaff
                 'amount' => $this->money($isBill ? $record->total : $record->amount, $record->currency),
             ],
             variant: $isBill ? ($record->status === 'DRAFT' ? 'bill_draft' : 'bill') : 'expense',
-            url: $isBill ? "/admin/bills/{$record->id}/view" : "/admin/expenses/{$record->id}/edit",
+            url: $isBill ? "/admin/bills/{$record->id}/view" : "/admin/expenses/{$record->id}/view",
         ), $this->creator($schedule->creator_id));
     }
 

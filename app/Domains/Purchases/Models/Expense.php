@@ -35,6 +35,11 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
  *
  * Two things hang off the row. Purchase taxes live in `taxes` as snapshots of
  * the tax type they were raised from, replaced wholesale rather than edited.
+ * `amount` is always the gross that left the account, tax included, whatever
+ * `tax_included` says: that flag only records how the figure was typed in, so
+ * the form can show it back the same way. The business-use share and the
+ * deductible flag never change the stored figures either; they are applied
+ * where tax is claimed (see ExpenseTaxPosition).
  * A receipt is a single file in the media library; the model only reports what
  * is attached, attaching and discarding are somebody else's job.
  */
@@ -67,6 +72,21 @@ class Expense extends Model implements HasMedia
     protected $guarded = ['id'];
 
     /**
+     * Column defaults, mirrored from the migration so a freshly created
+     * expense reports them before it is read back.
+     *
+     * An amount is entered with tax included, the spend is wholly for the
+     * business and it counts as a deduction unless somebody says otherwise.
+     *
+     * @var array<string, mixed>
+     */
+    protected $attributes = [
+        'tax_included' => true,
+        'business_use_percent' => 100,
+        'tax_deductible' => true,
+    ];
+
+    /**
      * Computed attributes, listed in the order they are serialized.
      *
      * @var array
@@ -91,6 +111,9 @@ class Expense extends Model implements HasMedia
         return [
             'notes' => 'string',
             'exchange_rate' => 'float',
+            'tax_included' => 'boolean',
+            'business_use_percent' => 'float',
+            'tax_deductible' => 'boolean',
         ];
     }
 
@@ -122,6 +145,14 @@ class Expense extends Model implements HasMedia
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class, 'customer_id');
+    }
+
+    /**
+     * Supplier the money went to, when one was named.
+     */
+    public function supplier(): BelongsTo
+    {
+        return $this->belongsTo(Supplier::class, 'supplier_id');
     }
 
     /**

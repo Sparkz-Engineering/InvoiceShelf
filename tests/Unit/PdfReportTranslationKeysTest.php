@@ -34,12 +34,15 @@ test('every translation key a report template uses exists in english', function 
     expect($keys)->not->toBeEmpty()
         ->and($missing)->toBe([]);
 })->with([
+    'bas',
     'expenses',
     'profit-loss',
     'purchases',
     'sales-customers',
     'sales-items',
     'tax-summary',
+    'tax-deductions',
+    'projects',
 ]);
 
 test('the expenses report headings are translated rather than printing their keys', function () {

@@ -6,6 +6,15 @@
       </span>
     </template>
 
+    <!-- View Expense -->
+    <BaseDropdownItem :to="`/admin/expenses/${row.id}/view`">
+      <BaseIcon
+        name="EyeIcon"
+        class="w-5 h-5 me-3 text-subtle group-hover:text-muted"
+      />
+      {{ $t('general.view') }}
+    </BaseDropdownItem>
+
     <!-- Edit Expense -->
     <BaseDropdownItem v-if="canEdit" :to="`/admin/expenses/${row.id}/edit`">
       <BaseIcon

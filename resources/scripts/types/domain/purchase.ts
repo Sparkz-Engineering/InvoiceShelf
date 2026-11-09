@@ -19,7 +19,7 @@ export interface RecurringCostTemplate {
   currency_id?: number
   exchange_rate?: number
   notes?: string | null
-  // BILL
+  // BILL, and EXPENSE (how the amount was typed)
   tax_included?: boolean
   reference?: string | null
   items?: PurchaseLine[]
@@ -29,6 +29,9 @@ export interface RecurringCostTemplate {
   expense_category_id?: number | null
   payment_method_id?: number | null
   taxes?: Array<{ tax_type_id: number; amount: number }>
+  business_use_percent?: number
+  tax_deductible?: boolean
+  deduction_note?: string | null
 }
 export interface RecurringCostOccurrence {
   id: number

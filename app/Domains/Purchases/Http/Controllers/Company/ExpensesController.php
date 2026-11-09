@@ -31,13 +31,15 @@ class ExpensesController extends Controller
         $filters = $request->all();
         $columns = ['expenses.*', 'expense_categories.name', 'customers.name as user_name'];
 
+        // The tax sum is added after select(), which would otherwise replace it
         $expenses = Expense::query()
-            ->with(['category', 'creator', 'fields'])
+            ->with(['category', 'creator', 'fields', 'media'])
             ->whereCompany()
             ->leftJoin('customers', 'expenses.customer_id', '=', 'customers.id')
             ->join('expense_categories', 'expenses.expense_category_id', '=', 'expense_categories.id')
             ->applyFilters($filters)
             ->select($columns)
+            ->withSum('taxes as tax_total', 'amount')
             ->paginateData($request->input('limit', 10));
 
         $total = Expense::whereCompany()->count();
@@ -65,13 +67,13 @@ class ExpensesController extends Controller
     }
 
     /**
-     * Return a single expense together with its applied taxes.
+     * Return a single expense together with its applied taxes and supplier.
      */
     public function show(Expense $expense)
     {
         $this->authorize('view', $expense);
 
-        $expense->load('taxes.taxType');
+        $expense->load(['taxes.taxType', 'supplier']);
 
         return new ExpenseResource($expense);
     }

@@ -16,6 +16,7 @@ use App\Domains\Receivables\Models\Payment;
 use App\Domains\Sales\Models\Estimate;
 use App\Domains\Sales\Models\Invoice;
 use App\Domains\Sales\Models\RecurringInvoice;
+use App\Domains\Taxation\Models\TaxDeduction;
 use App\Domains\Taxation\Models\TaxType;
 
 return [
@@ -655,6 +656,51 @@ return [
             'ability' => 'view-financial-reports',
             'presets' => ['manager', 'read-only'],
             'model' => null,
+        ],
+        [
+            'name' => 'record BAS lodgements',
+            'ability' => 'manage-bas-lodgement',
+            'presets' => ['manager'],
+            'model' => null,
+            'depends_on' => [
+                'view-financial-reports',
+            ],
+        ],
+
+        // Tax deductions recorded by hand
+        [
+            'name' => 'view tax deduction',
+            'ability' => 'view-tax-deduction',
+            'presets' => ['manager', 'read-only'],
+            'model' => TaxDeduction::class,
+            'depends_on' => [],
+        ],
+        [
+            'name' => 'create tax deduction',
+            'ability' => 'create-tax-deduction',
+            'presets' => ['manager'],
+            'model' => TaxDeduction::class,
+            'depends_on' => [
+                'view-tax-deduction',
+            ],
+        ],
+        [
+            'name' => 'edit tax deduction',
+            'ability' => 'edit-tax-deduction',
+            'presets' => ['manager'],
+            'model' => TaxDeduction::class,
+            'depends_on' => [
+                'view-tax-deduction',
+            ],
+        ],
+        [
+            'name' => 'delete tax deduction',
+            'ability' => 'delete-tax-deduction',
+            'presets' => ['manager'],
+            'model' => TaxDeduction::class,
+            'depends_on' => [
+                'view-tax-deduction',
+            ],
         ],
 
         // Exchange Rate Provider

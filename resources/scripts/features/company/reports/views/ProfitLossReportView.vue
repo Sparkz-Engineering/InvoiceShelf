@@ -23,9 +23,21 @@ const getReportUrl = computed<string | null>(() => url.value)
 
 const selectedCompany = computed(() => companyStore.selectedCompany)
 
+// A GST-registered business needs income and expenses without GST for its
+// income tax return; a company using the BAS worksheet starts that way
+const excludeTax = ref<boolean>(
+  companyStore.selectedCompanySettings?.bas_enabled === 'YES',
+)
+
 const dateRangeUrl = computed<string>(() => {
-  return `${siteURL.value}?from_date=${formatDate(formData.from_date)}&to_date=${formatDate(formData.to_date)}`
+  const base = `${siteURL.value}?from_date=${formatDate(formData.from_date)}&to_date=${formatDate(formData.to_date)}`
+
+  return excludeTax.value ? `${base}&exclude_tax=1` : base
 })
+
+function onExcludeTaxChange(): void {
+  getReports(false)
+}
 
 // The header button lives on the layout above, so the tab on screen lends it
 // its own parameters. They are read at click time, which is why it is a
@@ -68,6 +80,14 @@ function viewReportsPDF(): void {
           block
           position="bottom-start"
         />
+      </BaseInputGroup>
+
+      <BaseInputGroup
+        class="mt-6"
+        :label="$t('reports.profit_loss.exclude_tax')"
+        :help-text="$t('reports.profit_loss.exclude_tax_help')"
+      >
+        <BaseSwitch v-model="excludeTax" @update:model-value="onExcludeTaxChange" />
       </BaseInputGroup>
 
       <!-- Phones open the PDF instead; the pane it updates is desktop-only -->

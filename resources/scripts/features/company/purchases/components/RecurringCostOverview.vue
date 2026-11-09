@@ -241,6 +241,6 @@ const lineColumns = computed(() => [
 function occurrenceLink(occurrence: RecurringCostOccurrence): string {
   return occurrence.record_type === 'bill'
     ? `/admin/bills/${occurrence.record_id}/view`
-    : `/admin/expenses/${occurrence.record_id}/edit`
+    : `/admin/expenses/${occurrence.record_id}/view`
 }
 </script>

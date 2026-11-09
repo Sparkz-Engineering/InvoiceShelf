@@ -144,12 +144,31 @@
         </template>
 
         <template #cell-name="{ row }">
-          <router-link
-            :to="{ path: `expenses/${row.data.id}/edit` }"
-            class="font-medium text-heading hover:text-primary-600"
-          >
-            {{ row.data.expense_category?.name ?? '-' }}
-          </router-link>
+          <span class="inline-flex items-center gap-1.5">
+            <router-link
+              :to="{ path: `expenses/${row.data.id}/view` }"
+              class="font-medium text-heading hover:text-primary-600"
+            >
+              {{ row.data.expense_category?.name ?? '-' }}
+            </router-link>
+            <!-- The receipt opens on the expense's own page -->
+            <BaseIcon
+              v-if="row.data.attachment_receipt_url"
+              name="PaperClipIcon"
+              class="h-4 w-4 shrink-0 text-subtle"
+              :aria-label="$t('expenses.has_receipt')"
+              role="img"
+            />
+          </span>
+        </template>
+
+        <template #cell-tax_total="{ row }">
+          <BaseFormatMoney
+            v-if="row.data.tax_total"
+            :amount="row.data.tax_total"
+            :currency="row.data.currency"
+          />
+          <span v-else class="text-subtle">-</span>
         </template>
 
         <template #cell-amount="{ row }">
@@ -320,6 +339,12 @@ const expenseColumns = computed<TableColumn[]>(() => [
   { key: 'user_name', label: t('expenses.customer') },
   { key: 'notes', label: t('expenses.note') },
   {
+    key: 'tax_total',
+    label: t('expenses.tax_column'),
+    align: 'end',
+    sortable: false,
+  },
+  {
     key: 'amount',
     label: t('expenses.amount'),
     align: 'end',
@@ -334,7 +359,7 @@ const expenseColumns = computed<TableColumn[]>(() => [
 ])
 
 function expenseLink(row: { id?: number | string }): string {
-  return `/admin/expenses/${row.id}/edit`
+  return `/admin/expenses/${row.id}/view`
 }
 
 debouncedWatch(filters, () => setFilters(), { debounce: 500 })

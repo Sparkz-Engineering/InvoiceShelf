@@ -44,6 +44,8 @@ dataset('reports', [
     'tax-summary',
     'profit-loss',
     'purchases',
+    'tax-deductions',
+    'projects',
 ]);
 
 function reportUrl(string $report, string $hash, string $extra = ''): string
@@ -58,6 +60,18 @@ test('every report streams a pdf', function (string $report) {
     expect($response->headers->get('content-type'))->toContain('application/pdf');
     expect($response->getContent())->toStartWith('%PDF-');
 })->with('reports');
+
+test('the BAS worksheet streams and downloads as a pdf', function () {
+    // A statement covers at most a year, so it is asked for one
+    $url = "/reports/bas/{$this->company->unique_hash}?from_date=2026-07-01&to_date=2026-09-30";
+
+    $streamed = get($url)->assertOk();
+    expect($streamed->headers->get('content-type'))->toContain('application/pdf')
+        ->and($streamed->getContent())->toStartWith('%PDF-');
+
+    $downloaded = get($url.'&download=true')->assertOk();
+    expect($downloaded->headers->get('content-disposition'))->toContain('attachment');
+});
 
 test('every report can be downloaded as an attachment', function (string $report) {
     $response = get(reportUrl($report, $this->company->unique_hash, '&download=true'));

@@ -1,11 +1,14 @@
 <?php
 
+use App\Domains\Reporting\Http\Controllers\BasReportController;
 use App\Domains\Reporting\Http\Controllers\CustomerSalesReportController;
 use App\Domains\Reporting\Http\Controllers\CustomerStatementReportController;
 use App\Domains\Reporting\Http\Controllers\ExpensesReportController;
 use App\Domains\Reporting\Http\Controllers\ItemSalesReportController;
 use App\Domains\Reporting\Http\Controllers\ProfitLossReportController;
+use App\Domains\Reporting\Http\Controllers\ProjectReportController;
 use App\Domains\Reporting\Http\Controllers\PurchasesReportController;
+use App\Domains\Reporting\Http\Controllers\TaxDeductionsReportController;
 use App\Domains\Reporting\Http\Controllers\TaxSummaryReportController;
 use Illuminate\Support\Facades\Route;
 
@@ -21,6 +24,9 @@ $hashedReports = [
     '/tax-summary' => TaxSummaryReportController::class,
     '/purchases' => PurchasesReportController::class,
     '/profit-loss' => ProfitLossReportController::class,
+    '/bas' => BasReportController::class,
+    '/tax-deductions' => TaxDeductionsReportController::class,
+    '/projects' => ProjectReportController::class,
 ];
 
 foreach ($hashedReports as $path => $controller) {

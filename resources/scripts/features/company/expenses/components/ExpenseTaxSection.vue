@@ -123,6 +123,7 @@
                   :key="`${tax.tax_type_id}-${currency?.id ?? 'none'}`"
                   :model-value="tax.amount / 100"
                   :currency="currency"
+                  :aria-label="`${tax.name} ${$t('expenses.tax_amount')}`"
                   @update:model-value="updateTaxAmount(index, $event)"
                 />
               </div>
@@ -167,9 +168,9 @@
 
           <div class="mt-4 space-y-3">
             <div class="flex items-center justify-between gap-4 text-sm">
-              <span class="text-muted">{{ $t('expenses.gross') }}</span>
+              <span class="text-muted">{{ $t('expenses.net') }}</span>
               <span class="font-medium text-heading">
-                <BaseFormatMoney :amount="amount" :currency="currency" />
+                <BaseFormatMoney :amount="netAmount" :currency="currency" />
               </span>
             </div>
             <div class="flex items-center justify-between gap-4 text-sm">
@@ -181,8 +182,8 @@
             <div
               class="flex items-center justify-between gap-4 border-t border-line-default pt-3 font-semibold text-heading"
             >
-              <span>{{ $t('expenses.net') }}</span>
-              <BaseFormatMoney :amount="netAmount" :currency="currency" />
+              <span>{{ $t('expenses.gross') }}</span>
+              <BaseFormatMoney :amount="grossAmount" :currency="currency" />
             </div>
           </div>
         </div>
@@ -196,25 +197,41 @@
 <script setup lang="ts">
 import BaseHelpPopover from '@/scripts/components/base/BaseHelpPopover.vue'
 import { PopoverContent, PopoverPortal, PopoverRoot, PopoverTrigger } from 'reka-ui'
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { taxTypeService } from '@/scripts/api/services/tax-type.service'
 import { ABILITIES } from '@/scripts/config/abilities'
 import TaxTypeModal from '@/scripts/features/company/settings/components/TaxTypeModal.vue'
 import { useModalStore } from '@/scripts/stores/modal.store'
 import { useUserStore } from '@/scripts/stores/user.store'
 import type { Currency } from '@/scripts/types/domain/currency'
 import type { ExpenseTax, TaxType } from '@/scripts/types/domain/tax'
+import {
+  calculateExpenseTax,
+  expenseTaxFromType,
+  taxTotalOf,
+} from '../tax-treatment'
 
+/**
+ * The tax rows of an expense, worked out from the figure the user typed.
+ *
+ * `amount` is that figure: the gross when tax is included, the net when tax
+ * is added on top. A row's amount follows it until the user types an amount
+ * of their own into the row; rows loaded with an expense follow it only when
+ * they still match what the maths gives, so a hand-corrected figure survives
+ * an edit.
+ */
 interface Props {
   modelValue: ExpenseTax[]
   amount: number
+  taxIncluded: boolean
+  taxTypes: TaxType[]
   currency: Currency | null
   isLoading?: boolean
 }
 
 interface Emits {
   (event: 'update:modelValue', taxes: ExpenseTax[]): void
+  (event: 'tax-type-created', taxType: TaxType): void
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -226,8 +243,7 @@ const { t } = useI18n()
 const modalStore = useModalStore()
 const userStore = useUserStore()
 const textSearch = ref<string>('')
-const taxTypes = ref<TaxType[]>([])
-const automaticTaxTypeIds = ref<Set<number>>(new Set())
+const manualTaxTypeIds = ref<Set<number>>(new Set())
 
 const canCreateTaxType = computed<boolean>(() =>
   userStore.hasAbilities(ABILITIES.CREATE_TAX_TYPE),
@@ -241,37 +257,61 @@ const filteredTaxTypes = computed<TaxType[]>(() => {
   const search = textSearch.value.trim().toLowerCase()
 
   if (!search) {
-    return taxTypes.value
+    return props.taxTypes
   }
 
-  return taxTypes.value.filter((taxType) =>
+  return props.taxTypes.filter((taxType) =>
     taxType.name.toLowerCase().includes(search),
   )
 })
 
-const inputTaxTotal = computed<number>(() =>
-  props.modelValue.reduce((total, tax) => total + tax.amount, 0),
+const inputTaxTotal = computed<number>(() => taxTotalOf(props.modelValue))
+
+const grossAmount = computed<number>(() =>
+  props.taxIncluded ? props.amount : props.amount + inputTaxTotal.value,
 )
 
-const netAmount = computed<number>(() => props.amount - inputTaxTotal.value)
+const netAmount = computed<number>(() =>
+  props.taxIncluded ? props.amount - inputTaxTotal.value : props.amount,
+)
 
-onMounted(async () => {
-  await fetchTaxTypes()
-})
+// Rows an expense arrives with keep their amount if the user had corrected it
+watch(
+  () => props.isLoading,
+  (loading) => {
+    if (loading) {
+      return
+    }
+
+    manualTaxTypeIds.value = new Set(
+      props.modelValue
+        .filter(
+          (tax) =>
+            tax.amount !==
+            calculateExpenseTax(tax, props.amount, props.taxIncluded),
+        )
+        .map((tax) => tax.tax_type_id),
+    )
+  },
+  { immediate: true },
+)
 
 watch(
-  () => props.amount,
+  () => [props.amount, props.taxIncluded] as const,
   () => {
-    const recalculatedTaxes = props.modelValue.map((tax) => {
-      if (!automaticTaxTypeIds.value.has(tax.tax_type_id)) {
-        return tax
-      }
+    // While an expense loads its figures arrive one by one; wait for all
+    if (props.isLoading) {
+      return
+    }
 
-      return {
-        ...tax,
-        amount: calculateTaxAmount(tax, props.amount),
-      }
-    })
+    const recalculatedTaxes = props.modelValue.map((tax) =>
+      manualTaxTypeIds.value.has(tax.tax_type_id)
+        ? tax
+        : {
+            ...tax,
+            amount: calculateExpenseTax(tax, props.amount, props.taxIncluded),
+          },
+    )
 
     if (
       recalculatedTaxes.some(
@@ -283,37 +323,16 @@ watch(
   },
 )
 
-async function fetchTaxTypes(): Promise<void> {
-  try {
-    const response = await taxTypeService.list({
-      limit: 'all',
-      transaction_type: 'purchases',
-    })
-    taxTypes.value = response.data
-  } catch {
-    taxTypes.value = []
-  }
-}
-
 function selectTaxType(taxType: TaxType, close?: () => void): void {
   if (selectedTaxTypeIds.value.has(taxType.id)) {
     return
   }
 
-  const tax: ExpenseTax = {
-    tax_type_id: taxType.id,
-    amount: calculateTaxAmount(taxType, props.amount),
-    name: taxType.name,
-    percent: taxType.percent,
-    calculation_type: taxType.calculation_type,
-    fixed_amount: taxType.fixed_amount,
-    compound_tax: taxType.compound_tax,
-    type: taxType.type,
-    tax_type: taxType,
-  }
-
-  automaticTaxTypeIds.value.add(tax.tax_type_id)
-  emit('update:modelValue', [...props.modelValue, tax])
+  manualTaxTypeIds.value.delete(taxType.id)
+  emit('update:modelValue', [
+    ...props.modelValue,
+    expenseTaxFromType(taxType, props.amount, props.taxIncluded),
+  ])
   close?.()
 }
 
@@ -324,7 +343,11 @@ function updateTaxAmount(index: number, amount: string | number): void {
     ? Math.round(majorAmount * 100)
     : 0
 
-  automaticTaxTypeIds.value.delete(tax.tax_type_id)
+  if (minorAmount === tax.amount) {
+    return
+  }
+
+  manualTaxTypeIds.value.add(tax.tax_type_id)
 
   emit(
     'update:modelValue',
@@ -338,23 +361,11 @@ function updateTaxAmount(index: number, amount: string | number): void {
 
 function removeTax(index: number): void {
   const tax = props.modelValue[index]
-  automaticTaxTypeIds.value.delete(tax.tax_type_id)
+  manualTaxTypeIds.value.delete(tax.tax_type_id)
   emit(
     'update:modelValue',
     props.modelValue.filter((_, currentIndex) => currentIndex !== index),
   )
-}
-
-function calculateTaxAmount(
-  tax: Pick<ExpenseTax, 'calculation_type' | 'fixed_amount' | 'percent'>,
-  grossAmount: number,
-): number {
-  if (tax.calculation_type === 'fixed') {
-    return tax.fixed_amount ?? 0
-  }
-
-  const divisor = 1 + (tax.percent ?? 0) / 100
-  return divisor === 0 ? 0 : Math.round(grossAmount - grossAmount / divisor)
 }
 
 function openTaxTypeModal(close: () => void): void {
@@ -366,10 +377,11 @@ function openTaxTypeModal(close: () => void): void {
     data: { transaction_type: 'purchases' },
     // Add the tax just created, as the invoice's tax popup does
     refreshData: async (taxType: unknown) => {
-      await fetchTaxTypes()
+      const created = taxType as TaxType | undefined
 
-      if ((taxType as TaxType | undefined)?.id) {
-        selectTaxType(taxType as TaxType)
+      if (created?.id) {
+        emit('tax-type-created', created)
+        selectTaxType(created)
       }
     },
   })

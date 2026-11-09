@@ -2,6 +2,7 @@ import type { RouteRecordRaw } from 'vue-router'
 
 const ExpenseIndexView = () => import('../purchases/views/PurchaseWorkspaceView.vue')
 const ExpenseCreateView = () => import('./views/ExpenseCreateView.vue')
+const ExpenseDetailView = () => import('./views/ExpenseDetailView.vue')
 
 export const expenseRoutes: RouteRecordRaw[] = [
   {
@@ -23,6 +24,16 @@ export const expenseRoutes: RouteRecordRaw[] = [
       requiresAuth: true,
       ability: 'create-expense',
       title: 'expenses.new_expense',
+    },
+  },
+  {
+    path: 'expenses/:id/view',
+    name: 'expenses.view',
+    component: ExpenseDetailView,
+    meta: {
+      requiresAuth: true,
+      ability: 'view-expense',
+      title: 'expenses.expense',
     },
   },
   {

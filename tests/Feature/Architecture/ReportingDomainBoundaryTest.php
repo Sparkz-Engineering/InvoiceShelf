@@ -69,19 +69,22 @@ test('the reporting domain preserves customer statement api routes', function ()
 test('the reporting domain preserves authenticated report routes', function () {
     $routes = collect(Route::getRoutes()->getRoutes())
         ->filter(fn ($route): bool => preg_match(
-            '#^reports/(?:customers/[^/]+/statement|sales/(?:customers|items)/[^/]+|expenses/[^/]+|tax-summary/[^/]+|profit-loss/[^/]+|purchases/[^/]+)$#',
+            '#^reports/(?:customers/[^/]+/statement|sales/(?:customers|items)/[^/]+|expenses/[^/]+|tax-summary/[^/]+|profit-loss/[^/]+|purchases/[^/]+|bas/[^/]+|tax-deductions/[^/]+|projects/[^/]+)$#',
             $route->uri(),
         ) === 1)
         ->reject(fn ($route): bool => str_contains($route->uri(), 'download-receipt') || str_contains($route->uri(), 'receipt'))
         ->keyBy(fn ($route): string => implode('|', $route->methods()).' '.$route->uri());
 
     expect($routes->keys()->sort()->values()->all())->toBe(collect([
+        'GET|HEAD reports/bas/{hash}',
         'GET|HEAD reports/customers/{customer}/statement',
         'GET|HEAD reports/expenses/{hash}',
         'GET|HEAD reports/profit-loss/{hash}',
+        'GET|HEAD reports/projects/{hash}',
         'GET|HEAD reports/purchases/{hash}',
         'GET|HEAD reports/sales/customers/{hash}',
         'GET|HEAD reports/sales/items/{hash}',
+        'GET|HEAD reports/tax-deductions/{hash}',
         'GET|HEAD reports/tax-summary/{hash}',
     ])->sort()->values()->all());
 

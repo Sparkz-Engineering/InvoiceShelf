@@ -65,6 +65,9 @@ test('a report with nothing in the period says so rather than showing a bare tot
     'tax-summary',
     'profit-loss',
     'purchases',
+    'bas',
+    'tax-deductions',
+    'projects',
 ]);
 
 /**
@@ -169,4 +172,7 @@ test('every report shares the company logo with its header', function (string $r
     'tax-summary',
     'profit-loss',
     'purchases',
+    'bas',
+    'tax-deductions',
+    'projects',
 ]);

@@ -15,6 +15,7 @@ use App\Domains\Purchases\Models\SupplierRefund;
 use App\Domains\Receivables\Models\Payment;
 use App\Domains\Sales\Models\Estimate;
 use App\Domains\Sales\Models\Invoice;
+use App\Domains\Taxation\Models\TaxDeduction;
 use App\Domains\Taxation\Models\TaxType;
 
 return [
@@ -617,6 +618,18 @@ return [
             'owner_only' => false,
             'ability' => 'view-financial-reports',
             'model' => '',
+        ],
+        [
+            'title' => 'navigation.tax_deductions',
+            'group' => 'admin',
+            'group_label' => 'navigation.admin',
+            'priority' => 35,
+            'link' => '/admin/tax-deductions',
+            'icon' => 'ReceiptPercentIcon',
+            'name' => 'TaxDeductions',
+            'owner_only' => false,
+            'ability' => 'view-tax-deduction',
+            'model' => TaxDeduction::class,
         ],
         [
             'title' => 'navigation.settings',

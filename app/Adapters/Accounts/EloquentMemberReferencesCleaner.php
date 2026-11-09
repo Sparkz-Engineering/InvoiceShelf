@@ -10,6 +10,8 @@ use App\Domains\Purchases\Models\Supplier;
 use App\Domains\Purchases\Models\SupplierCredit;
 use App\Domains\Purchases\Models\SupplierPayment;
 use App\Domains\Purchases\Models\SupplierRefund;
+use App\Domains\Taxation\Models\BasLodgement;
+use App\Domains\Taxation\Models\TaxDeduction;
 
 /**
  * Keeps the records a departing member created and forgets who created them,
@@ -27,6 +29,8 @@ class EloquentMemberReferencesCleaner implements MemberReferencesCleaner
         SupplierPayment::class,
         SupplierRefund::class,
         RecurringCost::class,
+        BasLodgement::class,
+        TaxDeduction::class,
     ];
 
     public function clear(User $user): void

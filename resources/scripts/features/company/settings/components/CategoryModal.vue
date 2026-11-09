@@ -6,12 +6,19 @@ import useVuelidate from '@vuelidate/core'
 import { useLookupDialog } from '@/scripts/composables/use-lookup-dialog'
 import { useNotificationStore } from '@/scripts/stores/notification.store'
 import { expenseService } from '@/scripts/api/services/expense.service'
-import type { ExpenseCategory } from '@/scripts/types/domain/expense'
+import type {
+  ExpenseCategory,
+  ExpenseTaxTreatment,
+} from '@/scripts/types/domain/expense'
 
 interface CategoryForm {
   id: number | null
   name: string
   description: string
+  /** Whether a new expense under this category starts as deductible */
+  tax_deductible: boolean
+  /** How a new expense's amount starts out; '' follows the company default */
+  default_tax_treatment: ExpenseTaxTreatment | ''
 }
 
 const props = withDefaults(
@@ -34,11 +41,39 @@ const { t } = useI18n()
 const isSaving = ref<boolean>(false)
 const isEdit = ref<boolean>(false)
 
-const currentCategory = ref<CategoryForm>({
-  id: null,
-  name: '',
-  description: '',
+const currentCategory = ref<CategoryForm>(emptyCategory())
+
+const treatmentOptions = computed<
+  Array<{ value: ExpenseTaxTreatment | ''; label: string }>
+>(() => {
+  const tax = t('expenses.tax')
+
+  return [
+    { value: '', label: t('settings.expense_category.treatment_company_default') },
+    { value: 'included', label: t('expenses.tax_treatment_included', { tax }) },
+    { value: 'excluded', label: t('expenses.tax_treatment_excluded', { tax }) },
+    { value: 'none', label: t('expenses.tax_treatment_none', { tax }) },
+  ]
 })
+
+function emptyCategory(): CategoryForm {
+  return {
+    id: null,
+    name: '',
+    description: '',
+    tax_deductible: true,
+    default_tax_treatment: '',
+  }
+}
+
+function payload() {
+  return {
+    name: currentCategory.value.name,
+    description: currentCategory.value.description || null,
+    tax_deductible: currentCategory.value.tax_deductible,
+    default_tax_treatment: currentCategory.value.default_tax_treatment || null,
+  }
+}
 
 const modalActive = dialog.active
 
@@ -71,6 +106,8 @@ async function setInitialData(): Promise<void> {
         id: response.data.id,
         name: response.data.name,
         description: response.data.description ?? '',
+        tax_deductible: response.data.tax_deductible ?? true,
+        default_tax_treatment: response.data.default_tax_treatment ?? '',
       }
     }
   } else {
@@ -91,19 +128,13 @@ async function submitCategoryData(): Promise<void> {
 
   try {
     if (isEdit.value && currentCategory.value.id) {
-      await expenseService.updateCategory(currentCategory.value.id, {
-        name: currentCategory.value.name,
-        description: currentCategory.value.description || null,
-      })
+      await expenseService.updateCategory(currentCategory.value.id, payload())
       notificationStore.showNotification({
         type: 'success',
         message: 'settings.expense_category.updated_message',
       })
     } else {
-      const response = await expenseService.createCategory({
-        name: currentCategory.value.name,
-        description: currentCategory.value.description || null,
-      })
+      const response = await expenseService.createCategory(payload())
       created = response.data
       notificationStore.showNotification({
         type: 'success',
@@ -122,11 +153,7 @@ async function submitCategoryData(): Promise<void> {
 }
 
 function resetForm(): void {
-  currentCategory.value = {
-    id: null,
-    name: '',
-    description: '',
-  }
+  currentCategory.value = emptyCategory()
 }
 
 function closeCategoryModal(): void {
@@ -180,6 +207,27 @@ function closeCategoryModal(): void {
               rows="4"
               cols="50"
               @input="v$.description.$touch()"
+            />
+          </BaseInputGroup>
+
+          <!-- Starting values for a new expense filed under this category -->
+          <BaseInputGroup
+            :label="$t('settings.expense_category.default_tax_treatment')"
+            :help-text="$t('settings.expense_category.default_tax_treatment_help')"
+          >
+            <BaseMultiselect
+              v-model="currentCategory.default_tax_treatment"
+              :options="treatmentOptions"
+              value-prop="value"
+              label="label"
+              :can-deselect="false"
+            />
+          </BaseInputGroup>
+
+          <BaseInputGroup :label="$t('expenses.tax_deductible')">
+            <BaseSwitch
+              v-model="currentCategory.tax_deductible"
+              :label-right="$t('settings.expense_category.tax_deductible_help')"
             />
           </BaseInputGroup>
         </BaseInputGrid>

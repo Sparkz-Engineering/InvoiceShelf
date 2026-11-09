@@ -27,12 +27,50 @@ class ExpenseCategory extends Model
 
     use HasFactory;
 
+    /** New expenses start with tax included in the amount typed. */
+    public const TAX_TREATMENT_INCLUDED = 'included';
+
+    /** New expenses start with tax added on top of the amount typed. */
+    public const TAX_TREATMENT_EXCLUDED = 'excluded';
+
+    /** New expenses start with no tax at all, such as bank fees. */
+    public const TAX_TREATMENT_NONE = 'none';
+
+    public const TAX_TREATMENTS = [
+        self::TAX_TREATMENT_INCLUDED,
+        self::TAX_TREATMENT_EXCLUDED,
+        self::TAX_TREATMENT_NONE,
+    ];
+
     /**
      * Columns a caller may set.
      *
+     * `tax_deductible` and `default_tax_treatment` are starting values for a
+     * new expense filed under the heading; a null treatment follows the
+     * company's default purchase tax.
+     *
      * @var array
      */
-    protected $fillable = ['name', 'company_id', 'description'];
+    protected $fillable = ['name', 'company_id', 'description', 'tax_deductible', 'default_tax_treatment'];
+
+    /**
+     * Column defaults, mirrored from the migration.
+     *
+     * @var array<string, mixed>
+     */
+    protected $attributes = [
+        'tax_deductible' => true,
+    ];
+
+    /**
+     * Attribute casts.
+     */
+    protected function casts(): array
+    {
+        return [
+            'tax_deductible' => 'boolean',
+        ];
+    }
 
     /**
      * Computed attributes, listed in the order they are serialized.

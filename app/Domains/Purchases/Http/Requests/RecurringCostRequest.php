@@ -86,6 +86,10 @@ class RecurringCostRequest extends FormRequest
                     ->where('transaction_type', TaxType::TRANSACTION_TYPE_PURCHASES),
             ],
             'taxes.*.amount' => ['required', 'integer', 'min:0'],
+            'tax_included' => ['sometimes', 'boolean'],
+            'business_use_percent' => ['sometimes', 'numeric', 'min:0', 'max:100'],
+            'tax_deductible' => ['sometimes', 'boolean'],
+            'deduction_note' => ['sometimes', 'nullable', 'string', 'max:10000'],
         ];
     }
 }

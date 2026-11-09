@@ -29,6 +29,8 @@ export interface ExpenseListResponse {
 export interface CreateExpenseCategoryPayload {
   name: string
   description?: string | null
+  tax_deductible?: boolean
+  default_tax_treatment?: 'included' | 'excluded' | 'none' | null
 }
 
 export const expenseService = {

@@ -44,7 +44,9 @@ use App\Domains\Sales\Models\Invoice;
 use App\Domains\Sales\Models\InvoiceItem;
 use App\Domains\Sales\Models\InvoiceReminder;
 use App\Domains\Sales\Models\RecurringInvoice;
+use App\Domains\Taxation\Models\BasLodgement;
 use App\Domains\Taxation\Models\Tax;
+use App\Domains\Taxation\Models\TaxDeduction;
 use App\Domains\Taxation\Models\TaxType;
 use App\Platform\Announcements\Models\Announcement;
 use App\Platform\Announcements\Models\AnnouncementDismissal;
@@ -133,6 +135,8 @@ final class ModelIdentityMap
             'setting' => Setting::class,
             'tax' => Tax::class,
             'tax_type' => TaxType::class,
+            'bas_lodgement' => BasLodgement::class,
+            'tax_deduction' => TaxDeduction::class,
             'transaction' => Transaction::class,
             'unit' => Unit::class,
             'user' => User::class,

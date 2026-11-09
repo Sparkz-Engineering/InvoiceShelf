@@ -16,6 +16,8 @@ use App\Domains\Purchases\Models\SupplierPaymentAllocation;
 use App\Domains\Purchases\Models\SupplierRefund;
 use App\Domains\Receivables\Models\PaymentAllocation;
 use App\Domains\Sales\Models\InvoiceReminder;
+use App\Domains\Taxation\Models\BasLodgement;
+use App\Domains\Taxation\Models\TaxDeduction;
 use App\Platform\Recurrence\Models\RecurrenceOccurrence;
 use Illuminate\Database\Eloquent\Model;
 
@@ -24,6 +26,8 @@ class EloquentCompanyDataPurger implements CompanyDataPurger
     public function purge(Company $company): void
     {
         foreach ([
+            BasLodgement::class,
+            TaxDeduction::class,
             RecurrenceOccurrence::class,
             InvoiceReminder::class,
             RecurringCost::class,

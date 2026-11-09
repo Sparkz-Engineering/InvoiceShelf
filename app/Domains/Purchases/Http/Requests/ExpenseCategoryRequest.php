@@ -2,7 +2,9 @@
 
 namespace App\Domains\Purchases\Http\Requests;
 
+use App\Domains\Purchases\Models\ExpenseCategory;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class ExpenseCategoryRequest extends FormRequest
 {
@@ -22,6 +24,8 @@ class ExpenseCategoryRequest extends FormRequest
         return [
             'name' => ['required'],
             'description' => ['nullable'],
+            'tax_deductible' => ['sometimes', 'boolean'],
+            'default_tax_treatment' => ['sometimes', 'nullable', Rule::in(ExpenseCategory::TAX_TREATMENTS)],
         ];
     }
 

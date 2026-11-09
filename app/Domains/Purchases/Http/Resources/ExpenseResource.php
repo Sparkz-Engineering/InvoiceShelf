@@ -7,6 +7,8 @@ use App\Domains\Accounts\Http\Resources\UserResource;
 use App\Domains\Contacts\Http\Resources\CustomerResource;
 use App\Domains\Metadata\Http\Resources\CustomFieldValueResource;
 use App\Domains\Money\Http\Resources\CurrencyResource;
+use App\Domains\Purchases\Application\ExpenseTaxPosition;
+use App\Domains\Purchases\Models\Expense;
 use App\Domains\Receivables\Http\Resources\PaymentMethodResource;
 use App\Domains\Taxation\Http\Resources\TaxResource;
 use Illuminate\Http\Request;
@@ -66,7 +68,16 @@ class ExpenseResource extends JsonResource
             'currency_id' => $expense->currency_id,
             'base_amount' => $expense->base_amount,
             'payment_method_id' => $expense->payment_method_id,
+            'tax_included' => (bool) $expense->tax_included,
+            'business_use_percent' => (float) $expense->business_use_percent,
+            'tax_deductible' => (bool) $expense->tax_deductible,
+            'deduction_note' => $expense->deduction_note,
+            ...$this->taxPosition($expense),
             'taxes' => TaxResource::collection($this->whenLoaded('taxes')),
+            'supplier' => $this->whenLoaded(
+                'supplier',
+                fn () => $expense->supplier ? new SupplierResource($expense->supplier) : null
+            ),
             'customer' => $this->when(
                 $expense->customer()->exists(),
                 fn () => new CustomerResource($expense->customer)
@@ -95,6 +106,40 @@ class ExpenseResource extends JsonResource
                 $expense->paymentMethod()->exists(),
                 fn () => new PaymentMethodResource($expense->paymentMethod)
             ),
+        ];
+    }
+
+    /**
+     * The tax on the receipt and what can be claimed of it, in the expense's
+     * own currency.
+     *
+     * A listing sums the tax in its query (`tax_total`), a detail response
+     * has the rows loaded; anything else asks the database once.
+     *
+     * @return array{tax_total: int, net_amount: int, claimable_tax: int, deductible_amount: int}
+     */
+    private function taxPosition(Expense $expense): array
+    {
+        $summed = $expense->getAttribute('tax_total');
+
+        $taxTotal = match (true) {
+            $summed !== null => (int) $summed,
+            $expense->relationLoaded('taxes') => (int) $expense->taxes->sum('amount'),
+            default => (int) $expense->taxes()->sum('amount'),
+        };
+
+        $position = ExpenseTaxPosition::from(
+            (int) $expense->amount,
+            $taxTotal,
+            $expense->business_use_percent,
+            (bool) $expense->tax_deductible,
+        );
+
+        return [
+            'tax_total' => $taxTotal,
+            'net_amount' => $position->net(),
+            'claimable_tax' => $position->claimableTax(),
+            'deductible_amount' => $position->deductibleAmount(),
         ];
     }
 }
