@@ -90,7 +90,9 @@ class ExpensesController extends Controller
             attributes: $request->getExpensePayload(),
             taxes: $request->input('taxes'),
             receipt: $this->receipt($request),
-            removeReceipt: (bool) $request->input('is_attachment_receipt_removed'),
+            // The form posts multipart, so the flag arrives as the word "true"
+            // or "false"; a cast would read "false" as true and drop the receipt
+            removeReceipt: $request->boolean('is_attachment_receipt_removed'),
             customFields: $this->customFields($request),
         );
 

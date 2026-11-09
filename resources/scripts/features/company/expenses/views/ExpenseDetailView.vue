@@ -156,7 +156,22 @@
               </div>
             </dl>
 
-            <PurchaseCustomFieldValues :fields="expense.fields" class="mt-5" />
+            <!-- Every expense field is listed, answered or not, so a field
+                 added after the expense was recorded still shows up -->
+            <dl
+              v-if="customFields.length"
+              class="mt-5 grid gap-5 border-t border-line-light pt-5 text-sm sm:grid-cols-2"
+            >
+              <div v-for="field in customFields" :key="field.id">
+                <dt class="text-muted">{{ field.label }}</dt>
+                <dd
+                  class="mt-1 break-words whitespace-pre-wrap"
+                  :class="field.answer === null ? 'text-subtle' : 'text-heading'"
+                >
+                  {{ field.answer ?? '—' }}
+                </dd>
+              </div>
+            </dl>
 
             <div v-if="expense.notes" class="mt-5">
               <p class="text-sm text-muted">{{ $t('expenses.note') }}</p>
@@ -292,10 +307,11 @@ import { useCompanyStore } from '@/scripts/stores/company.store'
 import { useDialogStore } from '@/scripts/stores/dialog.store'
 import { useUserStore } from '@/scripts/stores/user.store'
 import { ABILITIES } from '@/scripts/config/abilities'
-import PurchaseCustomFieldValues from '../../purchases/components/PurchaseCustomFieldValues.vue'
+import { useCustomFieldDefinitions } from '@/scripts/features/shared/custom-fields/use-custom-fields'
 import ExpenseReceiptPreview from '../components/ExpenseReceiptPreview.vue'
 import { treatmentOf } from '../tax-treatment'
 import type { Expense } from '@/scripts/types/domain/expense'
+import type { CustomFieldValue } from '@/scripts/types/domain/custom-field'
 
 /**
  * One expense, read-only: what was paid, the tax on it and what can be
@@ -326,6 +342,31 @@ const canCredit = computed<boolean>(
 
 const currency = computed(() => expense.value?.currency ?? null)
 
+const definitions = useCustomFieldDefinitions('Expense')
+
+/** Each expense custom field with this expense's answer, or null for none. */
+const customFields = computed<Array<{ id: number; label: string; answer: string | null }>>(() =>
+  definitions.value.map((definition) => {
+    const saved = expense.value?.fields?.find((field) => field.custom_field_id === definition.id)
+
+    return { id: definition.id, label: definition.label, answer: saved ? displayAnswer(saved) : null }
+  }),
+)
+
+function displayAnswer(field: CustomFieldValue): string | null {
+  const value = field.default_answer
+
+  if (value === null || value === '') {
+    return null
+  }
+
+  if (field.type === 'Switch') {
+    return t(value === true || Number(value) === 1 ? 'general.yes' : 'general.no')
+  }
+
+  return String(field.default_formatted_answer ?? value)
+}
+
 const isForeignCurrency = computed<boolean>(
   () =>
     Boolean(expense.value) &&
@@ -333,7 +374,7 @@ const isForeignCurrency = computed<boolean>(
 )
 
 const taxName = computed<string>(
-  () => expense.value?.taxes?.[0]?.name ?? t('expenses.tax'),
+  () => expense.value?.taxes?.[0]?.name ?? t('expenses.tax_column'),
 )
 
 const title = computed<string>(

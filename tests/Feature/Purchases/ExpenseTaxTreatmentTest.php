@@ -186,6 +186,32 @@ test('a PDF receipt is served for viewing in place, not as a download', function
         ->and((string) $response->headers->get('Content-Disposition'))->not->toContain('attachment');
 });
 
+test('saving an expense from the form keeps its receipt unless it was removed', function () {
+    Storage::fake('local');
+
+    $receipt = UploadedFile::fake()->createWithContent('receipt.pdf', "%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n");
+    $multipart = fn (array $extra = []) => [
+        ...gstExpensePayload($this),
+        'taxes' => json_encode([['tax_type_id' => $this->gst->id, 'amount' => 1000]]),
+        ...$extra,
+    ];
+
+    $id = $this->post('/api/v1/expenses', $multipart(['attachment_receipt' => $receipt]), ['Accept' => 'application/json'])
+        ->assertCreated()
+        ->json('data.id');
+
+    // The form always sends the flag, as the word "false" when nothing was removed
+    $this->post("/api/v1/expenses/{$id}", $multipart(['_method' => 'PUT', 'notes' => 'Edited', 'is_attachment_receipt_removed' => 'false']), ['Accept' => 'application/json'])
+        ->assertOk();
+
+    expect(Expense::findOrFail($id)->getMedia('receipts'))->toHaveCount(1);
+
+    $this->post("/api/v1/expenses/{$id}", $multipart(['_method' => 'PUT', 'is_attachment_receipt_removed' => 'true']), ['Accept' => 'application/json'])
+        ->assertOk();
+
+    expect(Expense::findOrFail($id)->getMedia('receipts'))->toHaveCount(0);
+});
+
 test('the customer portal does not show how an expense is claimed', function () {
     $customer = Customer::factory()->create(['company_id' => $this->companyId]);
     $expense = Expense::factory()->create([
